@@ -38,6 +38,7 @@ import com.stereowalker.survive.world.temperature.conditions.TemperatureChangeIn
 import com.stereowalker.unionlib.util.ModHelper;
 import com.stereowalker.unionlib.util.RegistryHelper;
 import com.stereowalker.unionlib.util.math.UnionMathHelper;
+import com.stereowalker.survive.config.TemperatureConfig;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -166,19 +167,21 @@ public class SurviveEvents {
 	}
 
 	public static void updateEnvTemperature(LivingEntity living) {
-		if (living != null && living instanceof ServerPlayer player && !living.level().isClientSide) {
-			SurviveEntityStats.addWetTime(player, player.isUnderWater() ? 2 : player.isInWaterOrRain() ? 1 : -2);
-		}
-		if (living != null && living instanceof ServerPlayer player) {
-			if (player.isAlive()) {
-				for (ResourceLocation queryId : TemperatureQuery.queries.keySet()) {
-					double queryValue = TemperatureQuery.queries.get(queryId).getA().run(player, SurviveEntityStats.getTemperatureStats(player).getTemperatureLevel(), player.level(), player.blockPosition(), true);
-					TemperatureData.setTemperatureModifier(player, queryId, queryValue, TemperatureQuery.queries.get(queryId).getB());
+		if (Survive.TEMPERATURE_CONFIG.enabled) {
+			if (living != null && living instanceof ServerPlayer player && !living.level().isClientSide) {
+				SurviveEntityStats.addWetTime(player, player.isUnderWater() ? 2 : player.isInWaterOrRain() ? 1 : -2);
+			}
+			if (living != null && living instanceof ServerPlayer player) {
+				if (player.isAlive()) {
+					for (ResourceLocation queryId : TemperatureQuery.queries.keySet()) {
+						double queryValue = TemperatureQuery.queries.get(queryId).getA().run(player, SurviveEntityStats.getTemperatureStats(player).getTemperatureLevel(), player.level(), player.blockPosition(), true);
+						TemperatureData.setTemperatureModifier(player, queryId, queryValue, TemperatureQuery.queries.get(queryId).getB());
+					}
 				}
 			}
-		}
-		if (living instanceof Player player) {
-			FoodUtils.giveLifespanToFood(player.getInventory().items, player.level().getGameTime());
+			if (living instanceof Player player) {
+				FoodUtils.giveLifespanToFood(player.getInventory().items, player.level().getGameTime());
+			}
 		}
 	}
 
@@ -194,6 +197,9 @@ public class SurviveEvents {
 
 	@SuppressWarnings("deprecation")
 	public static double getExactTemperature(Level world, BlockPos pos, TempType type) {
+		if (!Survive.TEMPERATURE_CONFIG.enabled) {
+			return Survive.DEFAULT_TEMP;
+		}
 		float skyLight = world.getChunkSource().getLightEngine().getLayerListener(LightLayer.SKY).getLightValue(pos);
 		float gameTime = world.getDayTime() % 24000L;
 		gameTime = gameTime/(200/3);
@@ -309,6 +315,7 @@ public class SurviveEvents {
 		default:
 			return Survive.DEFAULT_TEMP;
 		}
+
 	}
 
 	private enum TempType {
@@ -335,6 +342,9 @@ public class SurviveEvents {
 	}
 
 	public static double getBlendedTemperature(Level world, BlockPos mainPos, BlockPos blendPos, TempType type) {
+		if (!Survive.TEMPERATURE_CONFIG.enabled) {
+			return Survive.DEFAULT_TEMP;
+		}
 		float distance = (float) Math.sqrt(mainPos.distSqr(blendPos));// 2 - 10 - 0
 		if (distance <= 5.0D) {
 			float blendRatio0 = distance / 5.0F;   // 0.2 - 1.0 - 0.0
@@ -348,6 +358,9 @@ public class SurviveEvents {
 	}
 
 	public static float getAverageTemperature(Level world, BlockPos pos, TempType type, int rangeInBlocks, TempMode mode) {
+		if (!Survive.TEMPERATURE_CONFIG.enabled) {
+			return Survive.DEFAULT_TEMP;
+		}
 		float temp = 0;
 		int tempAmount = 0;
 		for (int x = -rangeInBlocks; x <= rangeInBlocks; x++) {
